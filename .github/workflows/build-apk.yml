@@ -16,17 +16,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Restore project archive
+        shell: bash
         run: |
-          cat PdfNotesApp_tablet.part1.b64 PdfNotesApp_tablet.part2.b64 PdfNotesApp_tablet.part3.b64 | base64 -d > project.tar.bz2
-          mkdir unpacked
+          set -euo pipefail
+          rm -f project.tar.bz2
+          : > project.tar.bz2
+          for part in PdfNotesApp_tablet.part*.b64; do
+            echo "Decoding $part"
+            base64 --decode "$part" >> project.tar.bz2
+          done
+          mkdir -p unpacked
           tar -xjf project.tar.bz2 -C unpacked
           PROJECT_DIR=$(find unpacked -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project: $PROJECT_DIR"
 
