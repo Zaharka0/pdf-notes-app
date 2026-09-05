@@ -21,9 +21,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Unpack project
+      - name: Restore project archive
         run: |
-          unzip -q PdfNotesApp_tablet.zip -d unpacked
+          cat PdfNotesApp_tablet.part1.b64 PdfNotesApp_tablet.part2.b64 PdfNotesApp_tablet.part3.b64 | base64 -d > project.tar.bz2
+          mkdir unpacked
+          tar -xjf project.tar.bz2 -C unpacked
           PROJECT_DIR=$(find unpacked -name settings.gradle.kts -printf '%h\n' | head -n 1)
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project: $PROJECT_DIR"
