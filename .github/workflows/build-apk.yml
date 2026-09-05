@@ -25,7 +25,9 @@ jobs:
         run: |
           set -euo pipefail
           rm -f project.tar.bz2
-          cat PdfNotesApp_tablet.part1.b64 PdfNotesApp_tablet.part2.b64 PdfNotesApp_tablet.part3.b64 | base64 -d > project.tar.bz2
+          base64 -d PdfNotesApp_tablet.part1.b64 > project.tar.bz2
+          base64 -d PdfNotesApp_tablet.part2.b64 >> project.tar.bz2
+          base64 -d PdfNotesApp_tablet.part3.b64 >> project.tar.bz2
           mkdir -p unpacked
           tar -xjf project.tar.bz2 -C unpacked
           PROJECT_DIR=$(find unpacked -name settings.gradle.kts -printf '%h\n' | head -n 1)
