@@ -43,9 +43,15 @@ jobs:
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/documents/DocumentListScreen.kt')
           s = p.read_text()
-          if 'import androidx.compose.foundation.lazy.grid.items' not in s:
-              s = s.replace('import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n', 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\nimport androidx.compose.foundation.lazy.grid.items\n')
-          s = s.replace('items(filtered, key = { it.id }) { doc -> DocumentCard(doc, onOpenDocument) }', 'items(filtered.size, key = { index -> filtered[index].id }) { index -> DocumentCard(filtered[index], onOpenDocument) }')
+          lines = [line for line in s.splitlines() if 'import androidx.compose.foundation.lazy.grid.items' not in line and 'import androidx.compose.foundation.lazy.items' not in line]
+          s = '\n'.join(lines) + '\n'
+          if 'import androidx.compose.foundation.lazy.grid.items as gridItems' not in s:
+              s = s.replace('import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n', 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\nimport androidx.compose.foundation.lazy.grid.items as gridItems\n')
+          if 'import androidx.compose.foundation.lazy.items as listItems' not in s:
+              s = s.replace('import androidx.compose.foundation.lazy.grid.items as gridItems\n', 'import androidx.compose.foundation.lazy.grid.items as gridItems\nimport androidx.compose.foundation.lazy.items as listItems\n')
+          s = s.replace('items(filtered, key = { it.id }) { doc -> DocumentCard(doc, onOpenDocument) }', 'gridItems(filtered.size, key = { index -> filtered[index].id }) { index -> DocumentCard(filtered[index], onOpenDocument) }')
+          s = s.replace('items(filtered.size, key = { index -> filtered[index].id }) { index -> DocumentCard(filtered[index], onOpenDocument) }', 'gridItems(filtered.size, key = { index -> filtered[index].id }) { index -> DocumentCard(filtered[index], onOpenDocument) }')
+          s = s.replace('androidx.compose.foundation.lazy.items(filtered, key = { it.id })', 'listItems(filtered, key = { it.id })')
           p.write_text(s)
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/navigation/AppNavHost.kt')
