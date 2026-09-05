@@ -26,11 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -f project.tar.bz2
-          : > project.tar.bz2
-          for part in PdfNotesApp_tablet.part*.b64; do
-            echo "Decoding $part"
-            base64 --decode "$part" >> project.tar.bz2
-          done
+          cat PdfNotesApp_tablet.part1.b64 PdfNotesApp_tablet.part2.b64 PdfNotesApp_tablet.part3.b64 > project.tar.bz2
           mkdir -p unpacked
           tar -xjf project.tar.bz2 -C unpacked
           PROJECT_DIR=$(find unpacked -name settings.gradle.kts -printf '%h\n' | head -n 1)
