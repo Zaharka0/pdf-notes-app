@@ -40,6 +40,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/documents/DocumentListScreen.kt')
           s = p.read_text()
@@ -53,15 +54,26 @@ jobs:
           s = '\n'.join(lines) + '\n'
           anchor = 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n'
           s = s.replace(anchor, anchor + 'import androidx.compose.foundation.lazy.grid.items\n')
-          # Replace any previous grid/list variants with an unambiguous indexed grid call.
-          import re
+          s = s.replace('import androidx.compose.foundation.lazy.grid.items\n', 'import androidx.compose.foundation.lazy.grid.items\nimport androidx.compose.foundation.lazy.items as listItems\n')
+
           s = re.sub(
               r'LazyVerticalGrid\(GridCells\.Adaptive\(190\.dp\).*?\n\s*\}',
-              '''LazyVerticalGrid(\n                    columns = GridCells.Adaptive(190.dp),\n                    modifier = Modifier.fillMaxSize(),\n                    horizontalArrangement = Arrangement.spacedBy(14.dp),\n                    verticalArrangement = Arrangement.spacedBy(14.dp),\n                    contentPadding = PaddingValues(bottom = 90.dp)\n                ) {\n                    items(count = filtered.size, key = { index -> filtered[index].id }) { index ->\n                        DocumentCard(filtered[index], onOpenDocument)\n                    }\n                }''',
+              '''LazyVerticalGrid(
+                    columns = GridCells.Adaptive(190.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(bottom = 90.dp)
+                ) {
+                    items(count = filtered.size, key = { index -> filtered[index].id }) { index ->
+                        DocumentCard(filtered[index], onOpenDocument)
+                    }
+                }''',
               s,
               count=1,
               flags=re.S
           )
+          s = s.replace('androidx.compose.foundation.lazy.items(filtered', 'listItems(filtered')
           p.write_text(s)
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/navigation/AppNavHost.kt')
