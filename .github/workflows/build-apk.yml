@@ -43,16 +43,25 @@ jobs:
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/documents/DocumentListScreen.kt')
           s = p.read_text()
-          lines = [line for line in s.splitlines() if 'import androidx.compose.foundation.lazy.grid.items' not in line and 'import androidx.compose.foundation.lazy.items' not in line]
+          lines = []
+          for line in s.splitlines():
+              if 'import androidx.compose.foundation.lazy.grid.items' in line:
+                  continue
+              if 'import androidx.compose.foundation.lazy.items' in line:
+                  continue
+              lines.append(line)
           s = '\n'.join(lines) + '\n'
-          marker = 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n'
-          if 'import androidx.compose.foundation.lazy.grid.items as gridItems' not in s:
-              s = s.replace(marker, marker + 'import androidx.compose.foundation.lazy.grid.items as gridItems\n')
-          marker2 = 'import androidx.compose.foundation.lazy.grid.items as gridItems\n'
-          if 'import androidx.compose.foundation.lazy.items as listItems' not in s:
-              s = s.replace(marker2, marker2 + 'import androidx.compose.foundation.lazy.items as listItems\n')
-          s = s.replace('items(filtered.size', 'gridItems(filtered.size')
-          s = s.replace('androidx.compose.foundation.lazy.items(filtered', 'listItems(filtered')
+          anchor = 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n'
+          s = s.replace(anchor, anchor + 'import androidx.compose.foundation.lazy.grid.items\n')
+          # Replace any previous grid/list variants with an unambiguous indexed grid call.
+          import re
+          s = re.sub(
+              r'LazyVerticalGrid\(GridCells\.Adaptive\(190\.dp\).*?\n\s*\}',
+              '''LazyVerticalGrid(\n                    columns = GridCells.Adaptive(190.dp),\n                    modifier = Modifier.fillMaxSize(),\n                    horizontalArrangement = Arrangement.spacedBy(14.dp),\n                    verticalArrangement = Arrangement.spacedBy(14.dp),\n                    contentPadding = PaddingValues(bottom = 90.dp)\n                ) {\n                    items(count = filtered.size, key = { index -> filtered[index].id }) { index ->\n                        DocumentCard(filtered[index], onOpenDocument)\n                    }\n                }''',
+              s,
+              count=1,
+              flags=re.S
+          )
           p.write_text(s)
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/navigation/AppNavHost.kt')
