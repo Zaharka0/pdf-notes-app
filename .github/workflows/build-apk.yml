@@ -43,7 +43,8 @@ jobs:
 
           p = Path('app/src/main/java/com/pdfnotes/app/ui/documents/DocumentListScreen.kt')
           s = p.read_text()
-          s = s.replace('import androidx.compose.foundation.lazy.grid.items\n', '')
+          if 'import androidx.compose.foundation.lazy.grid.items' not in s:
+              s = s.replace('import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n', 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\nimport androidx.compose.foundation.lazy.grid.items\n')
           s = s.replace('items(filtered, key = { it.id }) { doc -> DocumentCard(doc, onOpenDocument) }', 'items(filtered.size, key = { index -> filtered[index].id }) { index -> DocumentCard(filtered[index], onOpenDocument) }')
           p.write_text(s)
 
