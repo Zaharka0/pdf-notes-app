@@ -14,40 +14,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Restore project archive
         run: |
           set -euo pipefail
           rm -f project.tar.bz2
           cat PdfNotesApp_tablet.part1.b64 PdfNotesApp_tablet.part2.b64 PdfNotesApp_tablet.part3.b64 > project.tar.bz2
-          file project.tar.bz2
           tar -tjf project.tar.bz2 >/dev/null
           mkdir -p unpacked
           tar -xjf project.tar.bz2 -C unpacked
           PROJECT_DIR=$(find unpacked -name settings.gradle.kts -printf '%h\n' | head -n 1)
           test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project: $PROJECT_DIR"
-
-      - name: Apply reference UI
+      - name: Apply responsive UI and PDF fixes
         run: |
           set -euo pipefail
-          SRC="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/ui"
-          DST="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/ui"
-          cp "$SRC/theme/Theme.kt" "$DST/theme/Theme.kt"
-          cp "$SRC/navigation/AppNavHost.kt" "$DST/navigation/AppNavHost.kt"
-          cp "$SRC/documents/DocumentListScreen.kt" "$DST/documents/DocumentListScreen.kt"
-          cp "$SRC/notes/NotesScreen.kt" "$DST/notes/NotesScreen.kt"
-          cp "$SRC/tools/ConverterScreen.kt" "$DST/tools/ConverterScreen.kt"
-          cp "$SRC/tools/ToolsScreen.kt" "$DST/tools/ToolsScreen.kt"
-          cp "$SRC/viewer/PdfViewerScreen.kt" "$DST/viewer/PdfViewerScreen.kt"
-
+          UI="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/ui"
+          DATA="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/data/repository"
+          DST_UI="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/ui"
+          DST_DATA="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/data/repository"
+          cp "$UI/theme/Theme.kt" "$DST_UI/theme/Theme.kt"
+          cp "$UI/navigation/AppNavHost.kt" "$DST_UI/navigation/AppNavHost.kt"
+          cp "$UI/documents/DocumentListScreen.kt" "$DST_UI/documents/DocumentListScreen.kt"
+          cp "$UI/notes/NotesScreen.kt" "$DST_UI/notes/NotesScreen.kt"
+          cp "$UI/tools/ConverterScreen.kt" "$DST_UI/tools/ConverterScreen.kt"
+          cp "$UI/tools/ToolsScreen.kt" "$DST_UI/tools/ToolsScreen.kt"
+          cp "$UI/viewer/PdfViewerScreen.kt" "$DST_UI/viewer/PdfViewerScreen.kt"
+          cp "$UI/viewer/PdfViewerViewModel.kt" "$DST_UI/viewer/PdfViewerViewModel.kt"
+          cp "$DATA/DocumentRepositoryImpl.kt" "$DST_DATA/DocumentRepositoryImpl.kt"
       - name: Patch Kotlin compile compatibility
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
@@ -61,19 +59,16 @@ jobs:
               s=s.replace(marker, marker+'        freeCompilerArgs += listOf("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")\n',1)
           p.write_text(s)
           PY
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-
       - name: Build debug APK
         working-directory: ${{ env.PROJECT_DIR }}
         run: gradle assembleDebug --no-daemon
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PdfNotesApp-reference-ui-debug-apk
+          name: PdfNotesApp-responsive-debug-apk
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
