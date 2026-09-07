@@ -140,8 +140,15 @@ private fun CompactBottomBar(
     navController: NavHostController
 ) {
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        items.take(4).forEach { item -> BottomItem(item, route, navController) }
-        BottomItem(NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"), route, navController)
+        items.take(4).forEach { item ->
+            BottomItem(item, route, navController, Modifier.weight(1f))
+        }
+        BottomItem(
+            NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"),
+            route,
+            navController,
+            Modifier.weight(1f)
+        )
     }
 }
 
@@ -194,39 +201,22 @@ private fun RailItem(
 private fun BottomItem(
     item: NavItem,
     route: String,
-    navController: NavHostController
+    navController: NavHostController,
+    modifier: Modifier
 ) {
-    NavigationBarItemCompat(
-        selected = route == item.route,
-        onClick = { navController.navigate(item.route) { launchSingleTop = true } },
-        icon = item.icon,
-        label = item.label
-    )
-}
-
-@Composable
-private fun NavigationBarItemCompat(
-    selected: Boolean,
-    onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String
-) {
-    Box(
-        modifier = Modifier.fillMaxHeight().weight(1f),
-        contentAlignment = Alignment.Center
-    ) {
-        TextButton(onClick = onClick, modifier = Modifier.fillMaxSize()) {
+    Box(modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
+        TextButton(onClick = { navController.navigate(item.route) { launchSingleTop = true } }) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = if (selected) MaterialTheme.colorScheme.primary
+                    item.icon,
+                    contentDescription = item.label,
+                    tint = if (route == item.route) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    label,
+                    item.label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) MaterialTheme.colorScheme.primary
+                    color = if (route == item.route) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
