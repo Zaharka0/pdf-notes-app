@@ -53,9 +53,7 @@ jobs:
               lines.append(line)
           s = '\n'.join(lines) + '\n'
           anchor = 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n'
-          s = s.replace(anchor, anchor + 'import androidx.compose.foundation.lazy.grid.items\n')
-          s = s.replace('import androidx.compose.foundation.lazy.grid.items\n', 'import androidx.compose.foundation.lazy.grid.items\nimport androidx.compose.foundation.lazy.items as listItems\n')
-
+          s = s.replace(anchor, anchor + 'import androidx.compose.foundation.lazy.grid.items\nimport androidx.compose.foundation.lazy.items as listItems\n')
           s = re.sub(
               r'LazyVerticalGrid\(GridCells\.Adaptive\(190\.dp\).*?\n\s*\}',
               '''LazyVerticalGrid(
@@ -82,6 +80,10 @@ jobs:
               s = s.replace('import androidx.compose.foundation.layout.Row\n', 'import androidx.compose.foundation.layout.Row\nimport androidx.compose.foundation.layout.Spacer\nimport androidx.compose.foundation.layout.padding\n')
           if 'import androidx.compose.runtime.collectAsState' not in s:
               s = s.replace('import androidx.compose.runtime.Composable\n', 'import androidx.compose.runtime.Composable\nimport androidx.compose.runtime.collectAsState\n')
+          if 'import androidx.compose.material3.ExperimentalMaterial3Api' not in s:
+              s = s.replace('import androidx.compose.material3.', 'import androidx.compose.material3.ExperimentalMaterial3Api\nimport androidx.compose.material3.', 1)
+          if '@OptIn(ExperimentalMaterial3Api::class)' not in s:
+              s = s.replace('fun AppNavHost(', '@OptIn(ExperimentalMaterial3Api::class)\nfun AppNavHost(')
           s = s.replace('Spacer(androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)))', 'Spacer(Modifier.weight(1f))')
           p.write_text(s)
 
@@ -90,6 +92,14 @@ jobs:
           if 'import androidx.compose.foundation.clickable' not in s:
               s = s.replace('import androidx.compose.foundation.layout.*\n', 'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.clickable\n')
           s = s.replace('modifier = Modifier.fillMaxWidth(), colors = ListItemDefaults.colors(containerColor = if (selected?.id == doc.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) { selected = doc }', 'modifier = Modifier.fillMaxWidth().clickable { selected = doc }, colors = ListItemDefaults.colors(containerColor = if (selected?.id == doc.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface))')
+          p.write_text(s)
+
+          # Prevent Compose experimental warnings from being promoted to errors.
+          p = Path('app/build.gradle.kts')
+          s = p.read_text()
+          marker = 'kotlinOptions {\n'
+          if 'ExperimentalMaterial3Api' not in s:
+              s = s.replace(marker, 'kotlinOptions {\n        freeCompilerArgs += listOf("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")\n', 1)
           p.write_text(s)
           PY
 
