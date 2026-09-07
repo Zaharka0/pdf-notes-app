@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,110 +81,67 @@ fun AppNavHost(
     )
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         val screenWidth = maxWidth
         val compact = screenWidth < 600.dp
 
         if (compact) {
             Column(Modifier.fillMaxSize()) {
-                MainContent(
-                    factory,
-                    navController,
-                    Modifier.weight(1f).fillMaxWidth()
-                )
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                    items.take(4).forEach { item ->
-                        BottomItem(item, route, navController)
-                    }
-                    NavigationBarItem(
-                        selected = route == Routes.SETTINGS,
-                        onClick = {
-                            navController.navigate(Routes.SETTINGS) {
-                                launchSingleTop = true
-                            }
-                        },
-                        icon = { Icon(Icons.Default.Settings, null) },
-                        label = { Text("Настройки") }
-                    )
-                }
+                MainContent(factory, navController, Modifier.weight(1f).fillMaxWidth())
+                CompactBottomBar(items, route, navController)
             }
         } else {
             Row(Modifier.fillMaxSize()) {
                 val railWidth = if (screenWidth < 840.dp) 88.dp else 220.dp
                 val showLabels = railWidth > 100.dp
-
                 NavigationRail(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(railWidth),
+                    modifier = Modifier.fillMaxHeight().width(railWidth),
                     containerColor = MaterialTheme.colorScheme.surface,
                     header = {
                         if (showLabels) {
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(18.dp)
-                            ) {
+                            Column(Modifier.fillMaxWidth().padding(18.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
-                                        Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
+                                        Modifier.size(36.dp).clip(CircleShape)
                                             .background(MaterialTheme.colorScheme.primary),
                                         Alignment.Center
-                                    ) {
-                                        Text("P", fontWeight = FontWeight.Bold)
-                                    }
+                                    ) { Text("P", fontWeight = FontWeight.Bold) }
                                     Spacer(Modifier.width(10.dp))
                                     Text("PDF Notes", style = MaterialTheme.typography.titleLarge)
                                 }
                             }
                         } else {
-                            Box(
-                                Modifier.fillMaxWidth().padding(vertical = 18.dp),
-                                Alignment.Center
-                            ) {
+                            Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), Alignment.Center) {
                                 Box(
-                                    Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
+                                    Modifier.size(38.dp).clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary),
                                     Alignment.Center
-                                ) {
-                                    Text("P", fontWeight = FontWeight.Bold)
-                                }
+                                ) { Text("P", fontWeight = FontWeight.Bold) }
                             }
                         }
                     }
                 ) {
-                    items.forEach { item ->
-                        RailItem(item, route, navController, showLabels)
-                    }
+                    items.forEach { item -> RailItem(item, route, navController, showLabels) }
                     Spacer(Modifier.weight(1f))
-                    RailItem(
-                        NavItem("trash", Icons.Default.DeleteOutline, "Корзина"),
-                        route,
-                        navController,
-                        showLabels
-                    )
-                    RailItem(
-                        NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"),
-                        route,
-                        navController,
-                        showLabels
-                    )
+                    RailItem(NavItem("trash", Icons.Default.DeleteOutline, "Корзина"), route, navController, showLabels)
+                    RailItem(NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"), route, navController, showLabels)
                 }
-
-                MainContent(
-                    factory,
-                    navController,
-                    Modifier.weight(1f).fillMaxHeight()
-                )
+                MainContent(factory, navController, Modifier.weight(1f).fillMaxHeight())
             }
         }
+    }
+}
+
+@Composable
+private fun CompactBottomBar(
+    items: List<NavItem>,
+    route: String,
+    navController: NavHostController
+) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+        items.take(4).forEach { item -> BottomItem(item, route, navController) }
+        BottomItem(NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"), route, navController)
     }
 }
 
@@ -238,21 +196,48 @@ private fun BottomItem(
     route: String,
     navController: NavHostController
 ) {
-    NavigationBarItem(
+    NavigationBarItemCompat(
         selected = route == item.route,
         onClick = { navController.navigate(item.route) { launchSingleTop = true } },
-        icon = { Icon(item.icon, null) },
-        label = { Text(item.label) }
+        icon = item.icon,
+        label = item.label
     )
+}
+
+@Composable
+private fun NavigationBarItemCompat(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String
+) {
+    Box(
+        modifier = Modifier.fillMaxHeight().weight(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        TextButton(onClick = onClick, modifier = Modifier.fillMaxSize()) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    tint = if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable
 private fun SettingsScreen() {
     Column(
-        Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 28.dp)
-            .verticalScroll(rememberScrollState()),
+        Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 28.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text("Настройки", style = MaterialTheme.typography.headlineLarge)
