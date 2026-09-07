@@ -35,71 +35,30 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project: $PROJECT_DIR"
 
-      - name: Patch Kotlin compile errors
+      - name: Apply reference UI
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/ui"
+          DST="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/ui"
+          cp "$SRC/theme/Theme.kt" "$DST/theme/Theme.kt"
+          cp "$SRC/navigation/AppNavHost.kt" "$DST/navigation/AppNavHost.kt"
+          cp "$SRC/documents/DocumentListScreen.kt" "$DST/documents/DocumentListScreen.kt"
+          cp "$SRC/notes/NotesScreen.kt" "$DST/notes/NotesScreen.kt"
+          cp "$SRC/tools/ConverterScreen.kt" "$DST/tools/ConverterScreen.kt"
+          cp "$SRC/tools/ToolsScreen.kt" "$DST/tools/ToolsScreen.kt"
+          cp "$SRC/viewer/PdfViewerScreen.kt" "$DST/viewer/PdfViewerScreen.kt"
+
+      - name: Patch Kotlin compile compatibility
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          p = Path('app/src/main/java/com/pdfnotes/app/ui/documents/DocumentListScreen.kt')
-          s = p.read_text()
-          lines = []
-          for line in s.splitlines():
-              if 'import androidx.compose.foundation.lazy.grid.items' in line:
-                  continue
-              if 'import androidx.compose.foundation.lazy.items' in line:
-                  continue
-              lines.append(line)
-          s = '\n'.join(lines) + '\n'
-          anchor = 'import androidx.compose.foundation.lazy.grid.LazyVerticalGrid\n'
-          s = s.replace(anchor, anchor + 'import androidx.compose.foundation.lazy.grid.items\nimport androidx.compose.foundation.lazy.items as listItems\n')
-          s = re.sub(
-              r'LazyVerticalGrid\(GridCells\.Adaptive\(190\.dp\).*?\n\s*\}',
-              '''LazyVerticalGrid(
-                    columns = GridCells.Adaptive(190.dp),
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(bottom = 90.dp)
-                ) {
-                    items(count = filtered.size, key = { index -> filtered[index].id }) { index ->
-                        DocumentCard(filtered[index], onOpenDocument)
-                    }
-                }''',
-              s,
-              count=1,
-              flags=re.S
-          )
-          s = s.replace('androidx.compose.foundation.lazy.items(filtered', 'listItems(filtered')
-          p.write_text(s)
-
-          p = Path('app/src/main/java/com/pdfnotes/app/ui/navigation/AppNavHost.kt')
-          s = p.read_text()
-          if 'import androidx.compose.foundation.layout.Spacer' not in s:
-              s = s.replace('import androidx.compose.foundation.layout.Row\n', 'import androidx.compose.foundation.layout.Row\nimport androidx.compose.foundation.layout.Spacer\nimport androidx.compose.foundation.layout.padding\n')
-          if 'import androidx.compose.runtime.collectAsState' not in s:
-              s = s.replace('import androidx.compose.runtime.Composable\n', 'import androidx.compose.runtime.Composable\nimport androidx.compose.runtime.collectAsState\n')
-          if 'import androidx.compose.material3.ExperimentalMaterial3Api' not in s:
-              s = s.replace('import androidx.compose.material3.', 'import androidx.compose.material3.ExperimentalMaterial3Api\nimport androidx.compose.material3.', 1)
-          if '@OptIn(ExperimentalMaterial3Api::class)' not in s:
-              s = s.replace('fun AppNavHost(', '@OptIn(ExperimentalMaterial3Api::class)\nfun AppNavHost(')
-          s = s.replace('Spacer(androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)))', 'Spacer(Modifier.weight(1f))')
-          p.write_text(s)
-
-          p = Path('app/src/main/java/com/pdfnotes/app/ui/notes/NotesScreen.kt')
-          s = p.read_text()
-          if 'import androidx.compose.foundation.clickable' not in s:
-              s = s.replace('import androidx.compose.foundation.layout.*\n', 'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.clickable\n')
-          s = s.replace('modifier = Modifier.fillMaxWidth(), colors = ListItemDefaults.colors(containerColor = if (selected?.id == doc.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)) { selected = doc }', 'modifier = Modifier.fillMaxWidth().clickable { selected = doc }, colors = ListItemDefaults.colors(containerColor = if (selected?.id == doc.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface))')
-          p.write_text(s)
-
-          # Prevent Compose experimental warnings from being promoted to errors.
-          p = Path('app/build.gradle.kts')
-          s = p.read_text()
-          marker = 'kotlinOptions {\n'
+          p=Path('app/build.gradle.kts')
+          s=p.read_text()
+          marker='kotlinOptions {\n'
           if 'ExperimentalMaterial3Api' not in s:
-              s = s.replace(marker, 'kotlinOptions {\n        freeCompilerArgs += listOf("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")\n', 1)
+              s=s.replace(marker, marker+'        freeCompilerArgs += listOf("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")\n',1)
           p.write_text(s)
           PY
 
@@ -115,6 +74,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: PdfNotesApp-debug-apk
+          name: PdfNotesApp-reference-ui-debug-apk
           path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
