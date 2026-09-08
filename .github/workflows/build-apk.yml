@@ -35,8 +35,10 @@ jobs:
           set -euo pipefail
           UI="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/ui"
           DATA="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/data/repository"
+          PDF="$GITHUB_WORKSPACE/reference_src/app/src/main/java/com/pdfnotes/app/data/local/pdf"
           DST_UI="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/ui"
           DST_DATA="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/data/repository"
+          DST_PDF="$PROJECT_DIR/app/src/main/java/com/pdfnotes/app/data/local/pdf"
           cp "$UI/theme/Theme.kt" "$DST_UI/theme/Theme.kt"
           cp "$UI/navigation/AppNavHost.kt" "$DST_UI/navigation/AppNavHost.kt"
           cp "$UI/documents/DocumentListScreen.kt" "$DST_UI/documents/DocumentListScreen.kt"
@@ -46,6 +48,7 @@ jobs:
           cp "$UI/viewer/PdfViewerScreen.kt" "$DST_UI/viewer/PdfViewerScreen.kt"
           cp "$UI/viewer/PdfViewerViewModel.kt" "$DST_UI/viewer/PdfViewerViewModel.kt"
           cp "$DATA/DocumentRepositoryImpl.kt" "$DST_DATA/DocumentRepositoryImpl.kt"
+          cp "$PDF/PdfRendererWrapper.kt" "$DST_PDF/PdfRendererWrapper.kt"
       - name: Patch Kotlin compile compatibility
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
