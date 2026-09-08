@@ -9,9 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,18 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import com.pdfnotes.app.di.ViewModelFactory
-import com.pdfnotes.app.ui.documents.DocumentListScreen
-import com.pdfnotes.app.ui.documents.DocumentListViewModel
+import com.pdfnotes.app.ui.documents.*
 import com.pdfnotes.app.ui.notes.NotesScreen
-import com.pdfnotes.app.ui.tools.ConverterScreen
-import com.pdfnotes.app.ui.tools.ToolsScreen
-import com.pdfnotes.app.ui.viewer.PdfViewerScreen
-import com.pdfnotes.app.ui.viewer.PdfViewerViewModel
+import com.pdfnotes.app.ui.tools.*
+import com.pdfnotes.app.ui.viewer.*
 
 private object Routes {
     const val DOCUMENTS = "documents"
@@ -42,30 +34,16 @@ private object Routes {
     fun viewer(id: String) = "viewer/$id"
 }
 
-data class NavItem(
-    val route: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val label: String
-)
+data class NavItem(val route: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String)
 
 @Composable
-fun AppNavHost(
-    factory: ViewModelFactory,
-    navController: NavHostController = rememberNavController()
-) {
-    val route = navController.currentBackStackEntryAsState().value?.destination?.route
-        ?: Routes.DOCUMENTS
-
+fun AppNavHost(factory: ViewModelFactory, navController: NavHostController = rememberNavController()) {
+    val route = navController.currentBackStackEntryAsState().value?.destination?.route ?: Routes.DOCUMENTS
     if (route.startsWith("viewer")) {
-        NavHost(
-            navController = navController,
-            startDestination = Routes.VIEWER,
-            modifier = Modifier.fillMaxSize()
-        ) {
+        NavHost(navController, Routes.VIEWER, Modifier.fillMaxSize()) {
             composable(Routes.VIEWER) { entry ->
                 val id = entry.arguments?.getString("documentId") ?: return@composable
-                val vm: PdfViewerViewModel = viewModel(factory = factory)
-                PdfViewerScreen(id, vm) { navController.popBackStack() }
+                PdfViewerScreen(id, viewModel(factory = factory)) { navController.popBackStack() }
             }
         }
         return
@@ -80,52 +58,36 @@ fun AppNavHost(
         NavItem(Routes.TOOLS, Icons.Default.Build, "Инструменты")
     )
 
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-    ) {
-        val screenWidth = maxWidth
-        val compact = screenWidth < 600.dp
-
-        if (compact) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        val width = maxWidth
+        if (width < 600.dp) {
             Column(Modifier.fillMaxSize()) {
                 MainContent(factory, navController, Modifier.weight(1f).fillMaxWidth())
-                CompactBottomBar(items, route, navController)
+                PhoneNavigation(items, route, navController)
             }
         } else {
+            val expanded = width >= 900.dp
+            val railWidth = if (expanded) 224.dp else 88.dp
             Row(Modifier.fillMaxSize()) {
-                val railWidth = if (screenWidth < 840.dp) 88.dp else 220.dp
-                val showLabels = railWidth > 100.dp
-                NavigationRail(
-                    modifier = Modifier.fillMaxHeight().width(railWidth),
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    header = {
-                        if (showLabels) {
-                            Column(Modifier.fillMaxWidth().padding(18.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        Modifier.size(36.dp).clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary),
-                                        Alignment.Center
-                                    ) { Text("P", fontWeight = FontWeight.Bold) }
-                                    Spacer(Modifier.width(10.dp))
-                                    Text("PDF Notes", style = MaterialTheme.typography.titleLarge)
-                                }
+                Surface(Modifier.width(railWidth).fillMaxHeight(), color = MaterialTheme.colorScheme.surface) {
+                    Column(Modifier.fillMaxSize()) {
+                        if (expanded) {
+                            Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                                BrandMark()
+                                Spacer(Modifier.width(10.dp))
+                                Text("PDF Notes", style = MaterialTheme.typography.titleLarge)
                             }
                         } else {
-                            Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), Alignment.Center) {
-                                Box(
-                                    Modifier.size(38.dp).clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary),
-                                    Alignment.Center
-                                ) { Text("P", fontWeight = FontWeight.Bold) }
-                            }
+                            Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), Alignment.Center) { BrandMark() }
+                        }
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            items.forEach { RailItem(it, route, navController, expanded) }
+                            Spacer(Modifier.height(8.dp))
+                            RailItem(NavItem("trash", Icons.Default.DeleteOutline, "Корзина"), route, navController, expanded)
+                            RailItem(NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"), route, navController, expanded)
+                            Spacer(Modifier.height(12.dp))
                         }
                     }
-                ) {
-                    items.forEach { item -> RailItem(item, route, navController, showLabels) }
-                    Spacer(Modifier.weight(1f))
-                    RailItem(NavItem("trash", Icons.Default.DeleteOutline, "Корзина"), route, navController, showLabels)
-                    RailItem(NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"), route, navController, showLabels)
                 }
                 MainContent(factory, navController, Modifier.weight(1f).fillMaxHeight())
             }
@@ -133,31 +95,41 @@ fun AppNavHost(
     }
 }
 
-@Composable
-private fun CompactBottomBar(
-    items: List<NavItem>,
-    route: String,
-    navController: NavHostController
-) {
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-        items.take(4).forEach { item ->
-            BottomItem(item, route, navController, Modifier.weight(1f))
-        }
-        BottomItem(
-            NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки"),
-            route,
-            navController,
-            Modifier.weight(1f)
-        )
+@Composable private fun BrandMark() {
+    Box(Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), Alignment.Center) {
+        Text("P", fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-private fun MainContent(
-    factory: ViewModelFactory,
-    navController: NavHostController,
-    modifier: Modifier
-) {
+private fun PhoneNavigation(items: List<NavItem>, route: String, navController: NavHostController) {
+    Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, tonalElevation = 5.dp) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            (items + NavItem(Routes.SETTINGS, Icons.Default.Settings, "Настройки")).forEach { item ->
+                Box(Modifier.width(78.dp).height(62.dp), Alignment.Center) {
+                    TextButton(
+                        onClick = {
+                            if (item.route != "recent" && item.route != "favorites" && item.route != "trash")
+                                navController.navigate(item.route) { launchSingleTop = true }
+                        },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(item.icon, item.label, tint = if (route == item.route) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(item.label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainContent(factory: ViewModelFactory, navController: NavHostController, modifier: Modifier) {
     NavHost(navController, Routes.DOCUMENTS, modifier) {
         composable(Routes.DOCUMENTS) {
             val vm: DocumentListViewModel = viewModel(factory = factory)
@@ -177,83 +149,30 @@ private fun MainContent(
 }
 
 @Composable
-private fun RailItem(
-    item: NavItem,
-    route: String,
-    navController: NavHostController,
-    showLabel: Boolean
-) {
+private fun RailItem(item: NavItem, route: String, navController: NavHostController, expanded: Boolean) {
     NavigationRailItem(
         selected = route == item.route,
-        onClick = {
-            if (item.route != "trash" && item.route != "recent" && item.route != "favorites") {
-                navController.navigate(item.route) { launchSingleTop = true }
-            }
-        },
-        icon = { Icon(item.icon, null) },
-        label = { if (showLabel) Text(item.label) },
-        alwaysShowLabel = showLabel,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 1.dp)
+        onClick = { if (item.route != "trash" && item.route != "recent" && item.route != "favorites") navController.navigate(item.route) { launchSingleTop = true } },
+        icon = { Icon(item.icon, item.label) },
+        label = { if (expanded) Text(item.label, maxLines = 1) },
+        alwaysShowLabel = expanded,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 3.dp, vertical = 1.dp)
     )
 }
 
 @Composable
-private fun BottomItem(
-    item: NavItem,
-    route: String,
-    navController: NavHostController,
-    modifier: Modifier
-) {
-    Box(modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
-        TextButton(onClick = { navController.navigate(item.route) { launchSingleTop = true } }) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    item.icon,
-                    contentDescription = item.label,
-                    tint = if (route == item.route) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    item.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (route == item.route) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun SettingsScreen() {
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 28.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
+    Column(Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("Настройки", style = MaterialTheme.typography.headlineLarge)
         Text("Параметры PDF Notes", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
+        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.padding(20.dp)) {
                 Text("Внешний вид", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    "Интерфейс автоматически адаптируется под телефон, планшет и большой экран.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Интерфейс автоматически адаптируется под телефон, планшет и большой экран.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        ListItem(
-            headlineContent = { Text("Хранение") },
-            supportingContent = { Text("Файлы и заметки остаются на устройстве") },
-            leadingContent = { Icon(Icons.Default.Storage, null) }
-        )
-        ListItem(
-            headlineContent = { Text("Версия") },
-            supportingContent = { Text("PDF Notes 1.1") },
-            leadingContent = { Icon(Icons.Default.Info, null) }
-        )
+        ListItem(headlineContent = { Text("Хранение") }, supportingContent = { Text("Файлы и заметки остаются на устройстве") }, leadingContent = { Icon(Icons.Default.Storage, null) })
+        ListItem(headlineContent = { Text("Версия") }, supportingContent = { Text("PDF Notes 1.3") }, leadingContent = { Icon(Icons.Default.Info, null) })
     }
 }
